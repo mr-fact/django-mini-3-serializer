@@ -12,6 +12,12 @@ class MyUserManager(UserManager):
         MyProfile(my_user=my_user, **extra_fields).save()
         return my_user
 
+    def get_or_create_user(self, username='test', password='test'):
+        try:
+            return MyUser.objects.get(username=username)
+        except MyUser.DoesNotExist:
+            return MyUser.objects.create_user(username=username, password=password)
+
 
 class MyUser(AbstractUser):
     friends = models.ManyToManyField('self', blank=True, null=True)
