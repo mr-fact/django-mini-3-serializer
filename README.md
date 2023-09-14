@@ -163,3 +163,166 @@ class EventSerializer(serializers.Serializer):
             )
         ]
 ```
+
+
+## Accessing the initial data and instance
+When passing an initial object or queryset to a serializer instance, the object will be made available as `.instance`. If no initial object is passed then the `.instance` attribute will be `None`.
+``` python
+EventSerializer(instance=event).instance
+# event
+
+EventSerializer().instance
+# None
+```
+When passing data to a serializer instance, the unmodified data will be made available as `.initial_data`. If the `data` keyword argument is not passed then the `.initial_data` attribute will `not exist`.
+``` python
+EventSerializer(data=event).initial_data
+# initial_data
+
+EventSerializer().initial_data
+# error
+```
+
+## Partial updates
+``` python
+# Update `comment`
+serializer = CommentSerializer(comment, data={'content': 'foo bar', 'email': 'mr-fact202020@gmail.com'})
+
+# Update `comment` with partial data
+serializer = CommentSerializer(comment, data={'content': 'foo bar'}, partial=True)
+```
+
+## Dealing with nested objects
+The **Serializer** class is itself a type of **Field**
+``` python
+class UserSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    username = serializers.CharField(max_length=100)
+```
+``` python
+class CommentSerializer(serializers.Serializer):
+    user = UserSerializer()
+    content = serializers.CharField(max_length=200)
+    created = serializers.DateTimeField()
+
+class CommentSerializer(serializers.Serializer):
+    user = UserSerializer(required=False)  # May be an anonymous user.
+    ...
+
+class CommentSerializer(serializers.Serializer):
+    edits = EditItemSerializer(many=True)  # A nested list of 'edit' items.
+    ...
+```
+
+### Writable nested representaions
+``` python
+serializer = CommentSerializer(data={'user': {'email': 'foobar', 'username': 'doe'}, 'content': 'baz'})
+serializer.is_valid()
+# False
+serializer.errors
+# {'user': {'email': ['Enter a valid e-mail address.']}, 'created': ['This field is required.']}
+```
+Similarly, the `.validated_data` property will include nested data structures.
+
+### Writing `.create()` or `.update()` methods for nested representaitons
+For updates you'll want to think carefully about how to handle `.update()` to relationships. For example if the data for the relationship is `None`, or not provided, which of the following should occur?
+ - Set the relationship to **NULL** in the database.
+ - **Delete** the associated instance.
+ - **Ignore** the data and leave the instance as it is.
+ - Raise a validation **error**.
+
+``` python
+class UserSerializer(serializers.ModelSerializer):
+    profile = ProfileSerializer()
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'profile']
+
+    def create(self, validated_data):
+        profile_data = validated_data.pop('profile')
+        user = User.objects.create(**validated_data)
+        Profile.objects.create(user=user, **profile_data)
+        return user
+
+     def update(self, instance, validated_data):
+            profile_data = validated_data.pop('profile')
+            # Unless the application properly enforces that this field is
+            # always set, the following could raise a `DoesNotExist`, which
+            # would need to be handled.
+            profile = instance.profile
+    
+            instance.username = validated_data.get('username', instance.username)
+            instance.email = validated_data.get('email', instance.email)
+            instance.save()
+    
+            profile.is_premium_member = profile_data.get(
+                'is_premium_member',
+                profile.is_premium_member
+            )
+            profile.has_support_contract = profile_data.get(
+                'has_support_contract',
+                profile.has_support_contract
+             )
+            profile.save()
+    
+            return instance
+```
+The default `ModelSerializer` `.create()` and `.update()` methods do not include support for **writable nested representations**.
+
+third-party packages that support automatic writable nested representaions -> [**DRF Writable Nested**](https://github.com/beda-software/drf-writable-nested)
+
+### write custom model manager classes that handle creating the correct instances.
+``` python
+class UserManager(models.Manager):
+    ...
+
+    def create(self, username, email, is_premium_member=False, has_support_contract=False):
+        user = User(username=username, email=email)
+        user.save()
+        profile = Profile(
+            user=user,
+            is_premium_member=is_premium_member,
+            has_support_contract=has_support_contract
+        )
+        profile.save()
+        return user
+```
+Our `.create()` method on the serializer class can now be re-written to use the new manager method.
+``` python
+class UserSerializer(serializers.ModelSerializer):
+    profile = ProfileSerializer()
+
+    def create(self, validated_data):
+        return User.objects.create(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            is_premium_member=validated_data['profile']['is_premium_member'],
+            has_support_contract=validated_data['profile']['has_support_contract']
+        )
+```
+Django documentation on [**model managers**](https://docs.djangoproject.com/en/stable/topics/db/managers/)
+
+## Dealing with multiple objects
+### serializing multiple objects
+``` python
+queryset = Book.objects.all()
+serializer = BookSerializer(queryset, many=True)
+serializer.data
+# [
+#     {'id': 0, 'title': 'The electric kool-aid acid test', 'author': 'Tom Wolfe'},
+#     {'id': 1, 'title': 'If this is a man', 'author': 'Primo Levi'},
+#     {'id': 2, 'title': 'The wind-up bird chronicle', 'author': 'Haruki Murakami'}
+# ]
+```
+### deserializing multiple objects
+The default behavior for deserializing multiple objects is to **support multiple object creation**, but **not support multiple object updates**.
+For more information on how to support or customize either of these cases, see the [ListSerializer](https://www.django-rest-framework.org/api-guide/serializers/#listserializer) documentation below.
+
+## including extra context
+``` python
+serializer = AccountSerializer(account, context={'request': request})
+serializer.data
+# {'id': 6, 'owner': 'denvercoder9', 'created': datetime.datetime(2013, 2, 12, 09, 44, 56, 678870), 'details': 'http://example.com/accounts/6/details'}
+```
+The context dictionary can be used within any serializer field logic, such as a custom `.to_representation()` method, by accessing the `self.context` attribute.
