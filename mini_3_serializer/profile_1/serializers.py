@@ -36,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
             'my_profile',
         ]
         extra_kwargs = {
-            'password': {'write_only': True}
+            'password': {'write_only': True, 'required': False}
         }
 
     def create(self, validated_data):
@@ -50,7 +50,18 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        pass
+        instance.username = validated_data.get('username', instance.username)
+        new_password = validated_data.get('password', None)
+        if new_password:
+            instance.set_password(new_password)
+
+        profile_data = validated_data.pop('my_profile', None)
+        if profile_data:
+            instance.my_profile.first_name = profile_data.get('first_name', instance.my_profile.first_name)
+            instance.my_profile.last_name = profile_data.get('last_name', instance.my_profile.last_name)
+            instance.my_profile.birthdate = profile_data.get('birthdate', instance.my_profile.birthdate)
+        instance.save()
+        return instance
 
     # def save(self, **kwargs):
     #     pass

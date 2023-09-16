@@ -25,7 +25,7 @@ def serializing():
 def deserializing():
     data = {
         'username': 'invalid_user',
-        # 'password': 'invalid_user',
+        'passwordd': 'invalid_user',
     }
     serializer = UserSerializer(data=data)
     print('deserializing: data(JSON) -> instance')
@@ -82,7 +82,7 @@ def create_user():
         }
     }
     serializer = UserSerializer(data=data)
-    print('deserializing: data(JSON) -> instance -> save')
+    print('deserializing: data(JSON) -> instance -> save(create)')
     print()
     print('data: ', data)
     print()
@@ -96,12 +96,45 @@ def create_user():
     print('serializer.validated_data:', serializer.validated_data)
 
 
+def update_user():
+    print('deserializing: data(JSON) ans instance -> instance -> save(update)')
+
+    # delete exist user
+    try:
+        instance = MyUser.objects.get(username='test4')
+        instance.delete()
+    except MyUser.DoesNotExist:
+        pass
+
+    create_user()
+    instance = MyUser.objects.get(username='test3')
+    new_data = {
+        'username': 'test4',
+        'my_profile': {
+            'last_name': 'test4 last name',
+        }
+    }
+
+    # update data
+    serializer = UserSerializer(instance=instance, data=new_data)
+    print('serializer.is_valid():', serializer.is_valid())
+    print('serializer.errors:', serializer.errors)
+    if serializer.is_valid():
+        print('serializer.save():', serializer.save())
+    print()
+    print('serializer.instance.username:', serializer.instance.username)
+    print('serializer.instance.first_name:', serializer.instance.my_profile.first_name)
+    print('serializer.instance.last_name:', serializer.instance.my_profile.last_name)
+    print('serializer.data:', serializer.data)
+
+
 def run(func):
     """
         functions:
         - serializing
         - deserializing
         - deserializing_valid
+        - update_user
     """
     print('\n\n\n')
     title = f'run: {func.__name__}'
@@ -115,3 +148,4 @@ run(serializing)
 run(deserializing)
 run(deserializing_valid)
 run(create_user)
+run(update_user)
