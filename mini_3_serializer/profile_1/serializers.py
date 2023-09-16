@@ -24,7 +24,7 @@ class ImageSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    images = ImageSerializer(required=False, many=True)
+    # images = ImageSerializer(required=False, many=True)
     # profile = ProfileSerializer(required=False)
 
     class Meta:
