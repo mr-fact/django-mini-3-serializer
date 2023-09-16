@@ -25,7 +25,7 @@ class ImageSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     # images = ImageSerializer(required=False, many=True)
-    # profile = ProfileSerializer(required=False)
+    profile = ProfileSerializer(required=False, source='my_profile')
 
     class Meta:
         model = MyUser
@@ -33,7 +33,7 @@ class UserSerializer(serializers.ModelSerializer):
             'username',
             'password',
             # 'images',
-            # 'profile',
+            'profile',
         ]
         extra_kwargs = {
             'password': {'write_only': True}
