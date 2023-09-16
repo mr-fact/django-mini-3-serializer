@@ -25,7 +25,7 @@ class ImageSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     # images = ImageSerializer(required=False, many=True)
-    profile = ProfileSerializer(required=False, source='my_profile')
+    my_profile = ProfileSerializer(required=False)
 
     class Meta:
         model = MyUser
@@ -33,17 +33,24 @@ class UserSerializer(serializers.ModelSerializer):
             'username',
             'password',
             # 'images',
-            'profile',
+            'my_profile',
         ]
         extra_kwargs = {
             'password': {'write_only': True}
         }
 
     def create(self, validated_data):
-        pass
+        instance = MyUser.objects.create_user(
+            username=validated_data.get('username'),
+            password=validated_data.get('password'),
+            first_name=validated_data.get('my_profile').get('first_name'),
+            last_name=validated_data.get('my_profile').get('last_name'),
+            birthdate=validated_data.get('my_profile').get('birthdate'),
+        )
+        return instance
 
     def update(self, instance, validated_data):
         pass
 
-    def save(self, **kwargs):
-        pass
+    # def save(self, **kwargs):
+    #     pass

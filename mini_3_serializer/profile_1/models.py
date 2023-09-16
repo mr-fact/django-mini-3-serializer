@@ -8,15 +8,18 @@ class MyUserManager(UserManager):
         Create and save a user with the given username, email, and password.
         also create a profile for this user
         """
+        first_name = extra_fields.pop('first_name', None)
+        last_name = extra_fields.pop('last_name', None)
+        birthdate = extra_fields.pop('birthdate', None)
         my_user = super()._create_user(username, email, password, **extra_fields)
-        MyProfile(my_user=my_user).save()
+        MyProfile(my_user=my_user, first_name=first_name, last_name=last_name, birthdate=birthdate).save()
         return my_user
 
-    def get_or_create_user(self, username='test', password='test'):
+    def get_or_create_user(self, username='test', password='test', **extra_fields):
         try:
             return MyUser.objects.get(username=username)
         except MyUser.DoesNotExist:
-            return MyUser.objects.create_user(username=username, password=password)
+            return MyUser.objects.create_user(username=username, password=password, **extra_fields)
 
 
 class MyUser(AbstractUser):

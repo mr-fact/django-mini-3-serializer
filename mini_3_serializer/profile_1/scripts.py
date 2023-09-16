@@ -45,7 +45,7 @@ def deserializing_valid():
     data = {
         'username': 'invalid_user',
         'password': 'invalid_user',
-        'profile': {
+        'my_profile': {
             'first_name': 'test2 first name',
             'last_name': 'test2 last name',
             'birthdate': '2023-09-16',
@@ -58,6 +58,38 @@ def deserializing_valid():
     print()
     print('serializer.is_valid():', serializer.is_valid())
     print('serializer.errors:', serializer.errors)
+    print()
+    print('serializer.instance:', serializer.instance)
+    print('serializer.data:', serializer.data)
+    print('serializer.validated_data:', serializer.validated_data)
+
+
+def create_user():
+    # delete exist user
+    try:
+        instance = MyUser.objects.get(username='test3')
+        instance.delete()
+    except MyUser.DoesNotExist:
+        pass
+
+    # create new user
+    data = {
+        'username': 'test3',
+        'password': 'test3',
+        'my_profile': {
+            'first_name': 'test3 first name',
+            'birthdate': '2023-09-16',
+        }
+    }
+    serializer = UserSerializer(data=data)
+    print('deserializing: data(JSON) -> instance -> save')
+    print()
+    print('data: ', data)
+    print()
+    print('serializer.is_valid():', serializer.is_valid())
+    print('serializer.errors:', serializer.errors)
+    if serializer.is_valid():
+        print('serializer.save():', serializer.save())
     print()
     print('serializer.instance:', serializer.instance)
     print('serializer.data:', serializer.data)
@@ -82,3 +114,4 @@ def run(func):
 run(serializing)
 run(deserializing)
 run(deserializing_valid)
+run(create_user)
