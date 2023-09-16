@@ -9,7 +9,7 @@ class MyUserManager(UserManager):
         also create a profile for this user
         """
         my_user = super()._create_user(username, email, password, **extra_fields)
-        MyProfile(my_user=my_user, **extra_fields).save()
+        MyProfile(my_user=my_user).save()
         return my_user
 
     def get_or_create_user(self, username='test', password='test'):
@@ -20,10 +20,13 @@ class MyUserManager(UserManager):
 
 
 class MyUser(AbstractUser):
-    friends = models.ManyToManyField('self', blank=True, null=True)
+    friends = models.ManyToManyField('self', blank=True)
     objects = MyUserManager()
     first_name = None
     last_name = None
+
+    def __str__(self):
+        return f'{self.username}'
 
 
 class MyImage(models.Model):
@@ -36,3 +39,6 @@ class MyProfile(models.Model):
     first_name = models.CharField( max_length=255, blank=True, null=True, default=None)
     last_name = models.CharField(max_length=255, blank=True, null=True, default=None)
     birthdate = models.DateField(blank=True, null=True, default=None)
+
+    def __str__(self):
+        return f'{self.my_user}'
