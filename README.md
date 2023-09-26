@@ -326,3 +326,128 @@ serializer.data
 # {'id': 6, 'owner': 'denvercoder9', 'created': datetime.datetime(2013, 2, 12, 09, 44, 56, 678870), 'details': 'http://example.com/accounts/6/details'}
 ```
 The context dictionary can be used within any serializer field logic, such as a custom `.to_representation()` method, by accessing the `self.context` attribute.
+
+# Model Serializer
+The `ModelSerializer` class provides a shortcut that lets you automatically create a `Serializer` class with fields that correspond to the Model fields.
+
+- it will automatically generate a set of fields for you, based on the model
+- it will automatically generate validators for the serializer, such as unique_together validators.
+- it includes simple default implementations of `.create()` and `.update()`.
+
+``` python
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['id', 'account_name', 'users', 'created']
+```
+
+Any relationships such as foreign keys on the model will be mapped to `PrimaryKeyRelatedField`.
+
+Reverse relationships are not included by default unless explicitly included as specified in the [serializer relations documentation](https://www.django-rest-framework.org/api-guide/relations/).
+
+If you only want a subset of the default fields to be used in a model serializer, you can do so using `fields` or `exclude` options, just as you would with a `ModelForm`.It is strongly recommended that you explicitly set all fields that should be serialized using the `fields` attribute. This will make it less likely to result in unintentionally exposing data when your models change.
+
+``` python
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['id', 'account_name', 'users', 'created']
+        # OR
+        # fields = '__all__'
+        # OR
+        # exclude = ['id', ]
+```
+
+## Specifying nested serialization
+The `depth` option should be set to an integer value that indicates the depth of relationships that should be traversed before reverting to a flat representation.
+``` python
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['id', 'account_name', 'users', 'created']
+        depth = 1
+```
+
+## Specifying fields explicitly & read only fields
+``` python
+class AccountSerializer(serializers.ModelSerializer):
+    url = serializers.CharField(source='get_absolute_url', read_only=True)
+    groups = serializers.PrimaryKeyRelatedField(many=True)
+
+    class Meta:
+        model = Account
+        fields = ['url', 'groups']
+        read_only_fields = ['account_name']
+```
+Model fields which have `editable=False` set, and `AutoField` fields will be set to read-only by default, and do not need to be added to the `read_only_fields` option.
+
+**Note:** There is a special-case where a read-only field is part of a `unique_together` constraint at the model level. In this case the field is required by the serializer class in order to validate the constraint, but should also not be editable by the user.
+``` python
+user = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+```
+Please review the [Validators Documentation](https://www.django-rest-framework.org/api-guide/validators/) for details on the [UniqueTogetherValidator](https://www.django-rest-framework.org/api-guide/validators/#uniquetogethervalidator) and [CurrentUserDefault](https://www.django-rest-framework.org/api-guide/validators/#currentuserdefault) classes.
+
+## Additional keywird arguments
+``` python
+class CreateUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email', 'username', 'password']
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = User(
+            email=validated_data['email'],
+            username=validated_data['username']
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
+```
+
+## Relational fields
+For full details see the [serializer relations documentation](https://www.django-rest-framework.org/api-guide/relations/).
+
+## Customizing field mapping
+`.serializer_field_mapping`
+- A mapping of Django model fields to REST framework serializer fields. You can override this mapping to alter the default serializer fields that should be used for each model field.
+
+`.serializer_related_field`
+- This property should be the serializer field class, that is used for relational fields by default.
+- For `ModelSerializer` this defaults to `serializers.PrimaryKeyRelatedField`.
+- For `HyperlinkedModelSerializer` this defaults to `serializers.HyperlinkedRelatedField`.
+
+`.serializer_url_field`
+- The serializer field class that should be used for any `url` field on the serializer.
+- Defaults to `serializers.HyperlinkedIdentityField`
+
+`.serializer_choice_field`
+- The serializer field class that should be used for any choice fields on the serializer.
+- Defaults to `serializers.ChoiceField`
+
+
+### The field_class and field_kwargs API
+`.build_standard_field(self, field_name, model_field)`
+- Called to generate a serializer field that maps to a standard model field.
+- The default implementation returns a serializer class based on the `serializer_field_mapping` attribute.
+
+`.build_relational_field(self, field_name, relation_info)`
+- Called to generate a serializer field that maps to a relational model field.
+- The default implementation returns a serializer class based on the serializer_related_field attribute.
+- The relation_info argument is a named tuple, that contains model_field, related_model, to_many and has_through_model properties.
+
+`.build_nested_field(self, field_name, relation_info, nested_depth)`
+- Called to generate a serializer field that maps to a relational model field, when the depth option has been set.
+- The default implementation dynamically creates a nested serializer class based on either ModelSerializer or HyperlinkedModelSerializer.
+- The nested_depth will be the value of the depth option, minus one.
+- The relation_info argument is a named tuple, that contains model_field, related_model, to_many and has_through_model properties.
+
+`.build_property_field(self, field_name, model_class)`
+- Called to generate a serializer field that maps to a property or zero-argument method on the model class.
+- The default implementation returns a ReadOnlyField class.
+
+`.build_url_field(self, field_name, model_class)`
+- Called to generate a serializer field for the serializer's own url field. The default implementation returns a HyperlinkedIdentityField class.
+
+`.build_unknown_field(self, field_name, model_class)`
+- Called when the field name did not map to any model field or model property. The default implementation raises an error, although subclasses may customize this behavior.
