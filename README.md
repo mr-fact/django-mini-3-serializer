@@ -388,6 +388,7 @@ user = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.Cu
 Please review the [Validators Documentation](https://www.django-rest-framework.org/api-guide/validators/) for details on the [UniqueTogetherValidator](https://www.django-rest-framework.org/api-guide/validators/#uniquetogethervalidator) and [CurrentUserDefault](https://www.django-rest-framework.org/api-guide/validators/#currentuserdefault) classes.
 
 ## Additional keywird arguments
+`extra_kwargs = {}`
 ``` python
 class CreateUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -451,3 +452,60 @@ For full details see the [serializer relations documentation](https://www.django
 
 `.build_unknown_field(self, field_name, model_class)`
 - Called when the field name did not map to any model field or model property. The default implementation raises an error, although subclasses may customize this behavior.
+
+## Hyperlinked Model Serializer
+By default the serializer will include a `url` field instead of a `primary key field`.
+``` python
+class AccountSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['url', 'id', 'account_name', 'users', 'created']
+```
+
+### Absolute and relative URLs
+When instantiating a `HyperlinkedModelSerializer` you must include the current `request` in the serializer context, for example:
+``` python
+serializer = AccountSerializer(queryset, context={'request': request})
+# http://api.example.com/accounts/1/
+```
+If you do want to use relative URLs, you should explicitly pass `{'request': None} ` in the serializer context.
+``` python
+/accounts/1/
+```
+
+### How hyperlink views are determined
+By default hyperlinks are expected to correspond to a view name that matches the style `'{model_name}-detail'`, and looks up the instance by a `pk` keyword argument.
+
+You can override a URL field view name and lookup field by using either, or both of, the `view_name` and `lookup_field` options in the `extra_kwargs` setting, like so:
+``` python
+class AccountSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['account_url', 'account_name', 'users', 'created']
+        extra_kwargs = {
+            'url': {'view_name': 'accounts', 'lookup_field': 'account_name'},
+            'users': {'lookup_field': 'username'}
+        }
+```
+Alternatively you can set the fields on the serializer explicitly.
+``` python
+class AccountSerializer(serializers.HyperlinkedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(
+        view_name='accounts',
+        lookup_field='slug'
+    )
+    users = serializers.HyperlinkedRelatedField(
+        view_name='user-detail',
+        lookup_field='username',
+        many=True,
+        read_only=True
+    )
+
+    class Meta:
+        model = Account
+        fields = ['url', 'account_name', 'users', 'created']
+```
+**Tip:** Properly matching together hyperlinked representations and your URL conf can sometimes be a bit fiddly. Printing the `repr` of a `HyperlinkedModelSerializer` instance is a particularly useful way to inspect exactly which view names and lookup fields the relationships are expected to map too.
+
+### Changing the URL field name
+The name of the URL field defaults to 'url'. You can override this globally, by using the `URL_FIELD_NAME` setting.
