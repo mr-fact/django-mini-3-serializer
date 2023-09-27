@@ -65,3 +65,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     # def save(self, **kwargs):
     #     pass
+
+
+class UserHyperLinkSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ['id', 'username', 'url', ]

@@ -1,7 +1,8 @@
 from profile_1.models import MyUser
-from profile_1.serializers import UserSerializer
+from profile_1.serializers import UserSerializer, UserHyperLinkSerializer
 
 
+# test 1
 # instance -> data(JSON)
 def serializing():
     instance = MyUser.objects.get_or_create_user('test1', 'test1')
@@ -21,6 +22,7 @@ def serializing():
     print('serializer.data:', serializer.data)
 
 
+# test 1.5
 # data(JSON) -> validation -> instance
 def deserializing():
     data = {
@@ -40,6 +42,7 @@ def deserializing():
     print('serializer.validated_data:', serializer.validated_data)
 
 
+# test 2
 # data(JSON) -> validation -> instance
 def deserializing_valid():
     data = {
@@ -64,6 +67,7 @@ def deserializing_valid():
     print('serializer.validated_data:', serializer.validated_data)
 
 
+# test 3
 def create_user():
     # delete exist user
     try:
@@ -96,6 +100,7 @@ def create_user():
     print('serializer.validated_data:', serializer.validated_data)
 
 
+# test 4
 def update_user():
     print('deserializing: data(JSON) ans instance -> instance -> save(update)')
 
@@ -128,6 +133,14 @@ def update_user():
     print('serializer.data:', serializer.data)
 
 
+# test 5
+def hyperlink():
+    print('send a GET REQUEST to /profile-1/test5/')
+    instance = MyUser.objects.get_or_create_user('test5', 'test5')
+    serializer = UserHyperLinkSerializer(instance=instance)
+    print(serializer.data)
+
+
 def run(func):
     """
         functions:
@@ -135,13 +148,18 @@ def run(func):
         - deserializing
         - deserializing_valid
         - update_user
+        - hyperlink
     """
     print('\n\n\n')
     title = f'run: {func.__name__}'
     print('#'*(len(title)+4))
     print(f'# {title} #')
     print('#'*(len(title)+4))
-    func()
+    try:
+        result = func()
+        print('result:', result)
+    except Exception as err:
+        print('errors:', err)
 
 
 run(serializing)
@@ -149,3 +167,4 @@ run(deserializing)
 run(deserializing_valid)
 run(create_user)
 run(update_user)
+run(hyperlink)
