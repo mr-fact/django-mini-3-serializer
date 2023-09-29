@@ -509,3 +509,172 @@ class AccountSerializer(serializers.HyperlinkedModelSerializer):
 
 ### Changing the URL field name
 The name of the URL field defaults to 'url'. You can override this globally, by using the `URL_FIELD_NAME` setting.
+
+
+## List Serializer
+When a serializer is instantiated and `many=True` is passed, a `ListSerializer` instance will be created.
+
+**defaults:**
+ - `allow_empty=True`
+ - `max_length=None`
+ - `min_length=None`
+
+### Custom ListSerializer
+``` python
+class CustomListSerializer(serializers.ListSerializer):
+    ...
+
+class CustomSerializer(serializers.Serializer):
+    ...
+    class Meta:
+        list_serializer_class = CustomListSerializer
+```
+for multiple object creation is to simply call `.create()` for each item in the list.
+``` python
+class BookListSerializer(serializers.ListSerializer):
+    def create(self, validated_data):
+        books = [Book(**item) for item in validated_data]
+        return Book.objects.bulk_create(books)
+
+class BookSerializer(serializers.Serializer):
+    ...
+    class Meta:
+        list_serializer_class = BookListSerializer
+```
+By default the `ListSerializer` class does not support `multiple updates`.
+When writing your `.update()` make sure to keep the following in mind:
+ - How do you determine which instance should be updated for each item in the list of data?
+ - How should insertions be handled? Are they invalid, or do they create new objects?
+ - How should removals be handled? Do they imply object deletion, or removing a relationship? Should they be silently ignored, or are they invalid?
+ - How should ordering be handled? Does changing the position of two items imply any state change or is it ignored?
+``` python
+class BookListSerializer(serializers.ListSerializer):
+    def update(self, instance, validated_data):
+        # Maps for id->instance and id->data item.
+        book_mapping = {book.id: book for book in instance}
+        data_mapping = {item['id']: item for item in validated_data}
+
+        # Perform creations and updates.
+        ret = []
+        for book_id, data in data_mapping.items():
+            book = book_mapping.get(book_id, None)
+            if book is None:
+                ret.append(self.child.create(data))
+            else:
+                ret.append(self.child.update(book, data))
+
+        # Perform deletions.
+        for book_id, book in book_mapping.items():
+            if book_id not in data_mapping:
+                book.delete()
+
+        return ret
+
+class BookSerializer(serializers.Serializer):
+    # We need to identify elements in the list using their primary key,
+    # so use a writable field here, rather than the default which would be read-only.
+    id = serializers.IntegerField()
+    ...
+
+    class Meta:
+        list_serializer_class = BookListSerializer
+```
+`many=True` -> `.__init__()` in `Serializer` and also `ListSerializer`
+
+Occasionally you might need to explicitly specify how the child and parent classes should be instantiated when `many=True` is passed. You can do so by using the `many_init` class method.
+``` python
+    @classmethod
+    def many_init(cls, *args, **kwargs):
+        # Instantiate the child serializer.
+        kwargs['child'] = cls()
+        # Instantiate the parent list serializer.
+        return CustomListSerializer(*args, **kwargs)
+```
+
+## Base Serializer
+ - `.data` returns the outgoing primitive representation
+ - `.is_valid()` deserializes and validates incoming data
+ - `.validatied_data` returns the validated incoming data
+ - `.errors` returns any errors during validation
+ - `.save()` persists the validated data into an object instance
+
+ - `.to_representaion()` override this to support serialization for read operations
+ - `.to_internal_value()` override this to support deserialization for write operations
+ - `.create()` and `.update()` override either or both of these to support saving instances
+
+ `BaseSerializer` provides the same interface as the `Serializer` or `ModelSerializer`.
+
+The only difference you'll notice when doing so is the `BaseSerializer` classes will not **generate HTML forms** in the browsable API.
+
+### Read-Only BaseSerializer classes
+we just need to override the `.to_representation()` method.
+``` python
+class HighScore(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    player_name = models.CharField(max_length=10)
+    score = models.IntegerField()
+
+class HighScoreSerializer(serializers.BaseSerializer):
+    def to_representation(self, instance):
+        return {
+            'score': instance.score,
+            'player_name': instance.player_name
+        }
+
+# single HighScode instances
+@api_view(['GET'])
+def high_score(request, pk):
+    instance = HighScore.objects.get(pk=pk)
+    serializer = HighScoreSerializer(instance)
+    return Response(serializer.data)
+
+# multiple HighScode instances
+@api_view(['GET'])
+def all_high_scores(request):
+    queryset = HighScore.objects.order_by('-score')
+    serializer = HighScoreSerializer(queryset, many=True)
+    return Response(serializer.data)
+```
+
+### Read-Write serializer classes
+`.to_internal_value()` method returns the validated values that will be used to construct the object instance, and may raise a `serializers.ValidationError` if the supplied data is in an incorrect format.
+
+`.to_internal_value()` -> `.is_valid()` + `.validated_data` + `.errors`
+
+`.save()` -> `.create()` + `.update()`
+``` python
+class HighScoreSerializer(serializers.BaseSerializer):
+    def to_internal_value(self, data):
+        score = data.get('score')
+        player_name = data.get('player_name')
+
+        # Perform the data validation.
+        if not score:
+            raise serializers.ValidationError({
+                'score': 'This field is required.'
+            })
+        if not player_name:
+            raise serializers.ValidationError({
+                'player_name': 'This field is required.'
+            })
+        if len(player_name) > 10:
+            raise serializers.ValidationError({
+                'player_name': 'May not be more than 10 characters.'
+            })
+
+        # Return the validated values. This will be available as
+        # the `.validated_data` property.
+        return {
+            'score': int(score),
+            'player_name': player_name
+        }
+
+    def to_representation(self, instance):
+        return {
+            'score': instance.score,
+            'player_name': instance.player_name
+        }
+
+    def create(self, validated_data):
+        return HighScore.objects.create(**validated_data)
+```
