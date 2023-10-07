@@ -39,6 +39,12 @@ class UserSerializer(serializers.ModelSerializer):
             'password': {'write_only': True, 'required': False}
         }
 
+    def to_representation(self, instance):
+        print('\t[serializing->to_representation()]')
+        super_data = super().to_representation(instance)
+        super_data['new_field'] = 'new_field_value'
+        return super_data
+
     def create(self, validated_data):
         instance = MyUser.objects.create_user(
             username=validated_data.get('username'),
