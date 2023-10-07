@@ -90,7 +90,14 @@ class UserSerializer(serializers.ModelSerializer):
         print('\t-[\t->to_representation()]')
         return result
 
+    def save(self, **kwargs):
+        print('\t+[save->save()]')
+        result = super().save(**kwargs)
+        print('\t-[\t->save()]')
+        return result
+
     def create(self, validated_data):
+        print('\t+[create->create()]')
         instance = MyUser.objects.create_user(
             username=validated_data.get('username'),
             password=validated_data.get('password'),
@@ -98,9 +105,12 @@ class UserSerializer(serializers.ModelSerializer):
             last_name=validated_data.get('my_profile').get('last_name'),
             birthdate=validated_data.get('my_profile').get('birthdate'),
         )
-        return instance
+        result = instance
+        print('\t-[\t->create()]')
+        return result
 
     def update(self, instance, validated_data):
+        print('\t+[update->update()]')
         instance.username = validated_data.get('username', instance.username)
         new_password = validated_data.get('password', None)
         if new_password:
@@ -112,10 +122,9 @@ class UserSerializer(serializers.ModelSerializer):
             instance.my_profile.last_name = profile_data.get('last_name', instance.my_profile.last_name)
             instance.my_profile.birthdate = profile_data.get('birthdate', instance.my_profile.birthdate)
         instance.save()
-        return instance
-
-    # def save(self, **kwargs):
-    #     pass
+        result = instance
+        print('\t-[\t->update()]')
+        return result
 
 
 class UserHyperLinkSerializer(serializers.HyperlinkedModelSerializer):
