@@ -1,18 +1,20 @@
 from rest_framework import serializers
 from rest_framework.fields import empty
 
-from profile_1.logs import start_end_log, message_log
+from profile_1.logs import start_end_log, message_log, level_log
 from profile_1.models import MyUser, MyProfile, MyImage
 
 
 class ProfileSerializer(serializers.ModelSerializer):
     @start_end_log
     @message_log('PS')
+    @level_log(1)
     def bind(self, field_name, parent):
         return super().bind(field_name, parent)
 
     @start_end_log
     @message_log('PS')
+    @level_log(1)
     def to_representation(self, instance):
         return super().to_representation(instance)
 
