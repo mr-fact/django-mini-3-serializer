@@ -55,36 +55,44 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     @start_end_log
+    @message_log('US')
     def is_valid(self, *, raise_exception=False):
         result = super().is_valid()
         return result
 
     @start_end_log
+    @message_log('US')
     def run_validation(self, data=empty):
         result = super().run_validation(data)
         return result
 
     @start_end_log
+    @message_log('US')
     def validate_empty_values(self, data):
         result = super().validate_empty_values(data)
         return result
 
     @start_end_log
+    @message_log('US')
     def to_internal_value(self, data):
         result = super().to_internal_value(data)
         return result
 
     @start_end_log
+    @message_log('US')
     def run_validators(self, value):
         result = super().run_validators(value)
         return result
 
     @start_end_log
+    @message_log('US')
+    @level_log(1)
     def validate_username(self, data):
         result = data
         return result
 
     @start_end_log
+    @message_log('US')
     def validate(self, attrs):
         result = attrs
         return result
@@ -98,15 +106,18 @@ class UserSerializer(serializers.ModelSerializer):
         return result
 
     @start_end_log
+    @message_log('US')
     def get_custom_char_field(self):
         return 'aa'
 
     @start_end_log
+    @message_log('US')
     def save(self, **kwargs):
         result = super().save(**kwargs)
         return result
 
     @start_end_log
+    @message_log('US')
     def create(self, validated_data):
         instance = MyUser.objects.create_user(
             username=validated_data.get('username'),
@@ -119,6 +130,7 @@ class UserSerializer(serializers.ModelSerializer):
         return result
 
     @start_end_log
+    @message_log('US')
     def update(self, instance, validated_data):
         instance.username = validated_data.get('username', instance.username)
         new_password = validated_data.get('password', None)
