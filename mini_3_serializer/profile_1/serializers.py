@@ -1,11 +1,20 @@
 from rest_framework import serializers
 from rest_framework.fields import empty
 
-from profile_1.logs import start_end_log
+from profile_1.logs import start_end_log, message_log
 from profile_1.models import MyUser, MyProfile, MyImage
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    @start_end_log
+    @message_log('PS')
+    def bind(self, field_name, parent):
+        return super().bind(field_name, parent)
+
+    @start_end_log
+    @message_log('PS')
+    def to_representation(self, instance):
+        return super().to_representation(instance)
 
     class Meta:
         model = MyProfile
@@ -28,6 +37,7 @@ class ImageSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     # images = ImageSerializer(required=False, many=True)
     my_profile = ProfileSerializer(required=False)
+    # custom_field = CustomField()
 
     class Meta:
         model = MyUser
@@ -36,6 +46,7 @@ class UserSerializer(serializers.ModelSerializer):
             'password',
             # 'images',
             'my_profile',
+            # 'custom_field',
         ]
         extra_kwargs = {
             'password': {'write_only': True, 'required': False}
@@ -77,6 +88,7 @@ class UserSerializer(serializers.ModelSerializer):
         return result
 
     @start_end_log
+    @message_log('US')
     def to_representation(self, instance):
         super_data = super().to_representation(instance)
         super_data['new_field'] = 'new_field_value'
