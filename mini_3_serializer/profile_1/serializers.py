@@ -17,6 +17,36 @@ class ProfileSerializer(serializers.ModelSerializer):
     @level_log(1)
     def to_representation(self, instance):
         return super().to_representation(instance)
+    
+    @start_end_log
+    @message_log('PS')
+    @level_log(1)
+    def run_validation(self, data=empty):
+        return super().run_validation(data)
+
+    @start_end_log
+    @message_log('PS')
+    @level_log(1)
+    def run_validators(self, value):
+        return super().run_validators(value)
+
+    @start_end_log
+    @message_log('PS')
+    @level_log(1)
+    def to_internal_value(self, data):
+        return super().to_internal_value(data)
+
+    @start_end_log
+    @message_log('PS')
+    @level_log(1)
+    def validate_empty_values(self, data):
+        return super().validate_empty_values(data)
+
+    @start_end_log
+    @message_log('PS')
+    @level_log(1)
+    def validate(self, attrs):
+        return super().validate(attrs)
 
     class Meta:
         model = MyProfile
@@ -86,7 +116,6 @@ class UserSerializer(serializers.ModelSerializer):
 
     @start_end_log
     @message_log('US')
-    @level_log(1)
     def validate_username(self, data):
         result = data
         return result
@@ -96,6 +125,11 @@ class UserSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         result = attrs
         return result
+    
+    @start_end_log
+    @message_log('US')
+    def bind(self, field_name, parent):
+        return super().bind(field_name, parent)
 
     @start_end_log
     @message_log('US')
