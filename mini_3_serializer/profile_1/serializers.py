@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.fields import empty
 
+from profile_1.logs import start_end_log
 from profile_1.models import MyUser, MyProfile, MyImage
 
 
@@ -40,64 +41,59 @@ class UserSerializer(serializers.ModelSerializer):
             'password': {'write_only': True, 'required': False}
         }
 
+    @start_end_log
     def is_valid(self, *, raise_exception=False):
-        print('\t+[deserializing->is_valid()]')
         result = super().is_valid()
-        print('\t-[\t->is_valid()]')
         return result
 
+    @start_end_log
     def run_validation(self, data=empty):
-        print('\t+[deserializing->run_validation()]')
         result = super().run_validation(data)
-        print('\t-[\t->run_validation()]')
         return result
 
+    @start_end_log
     def validate_empty_values(self, data):
-        print('\t+[deserializing->validate_empty_values()]')
         result = super().validate_empty_values(data)
-        print('\t-[\t->validate_empty_values()]')
         return result
 
+    @start_end_log
     def to_internal_value(self, data):
-        print('\t+[deserializing->to_internal_value()]')
         result = super().to_internal_value(data)
-        print('\t-[\t->to_internal_value()]')
         return result
 
+    @start_end_log
     def run_validators(self, value):
-        print('\t+[deserializing->run_validators()]')
         result = super().run_validators(value)
-        print('\t-[\t->run_validators()]')
         return result
 
+    @start_end_log
     def validate_username(self, data):
-        print('\t+[deserializing->field_validate()]')
         result = data
-        print('\t-[\t->field_validate()]')
         return result
 
+    @start_end_log
     def validate(self, attrs):
-        print('\t+[deserializing->validate()]')
         result = attrs
-        print('\t-[\t->validate()]')
         return result
 
+    @start_end_log
     def to_representation(self, instance):
-        print('\t+[serializing->to_representation()]')
         super_data = super().to_representation(instance)
         super_data['new_field'] = 'new_field_value'
         result = super_data
-        print('\t-[\t->to_representation()]')
         return result
 
+    @start_end_log
+    def get_custom_char_field(self):
+        return 'aa'
+
+    @start_end_log
     def save(self, **kwargs):
-        print('\t+[save->save()]')
         result = super().save(**kwargs)
-        print('\t-[\t->save()]')
         return result
 
+    @start_end_log
     def create(self, validated_data):
-        print('\t+[create->create()]')
         instance = MyUser.objects.create_user(
             username=validated_data.get('username'),
             password=validated_data.get('password'),
@@ -106,11 +102,10 @@ class UserSerializer(serializers.ModelSerializer):
             birthdate=validated_data.get('my_profile').get('birthdate'),
         )
         result = instance
-        print('\t-[\t->create()]')
         return result
 
+    @start_end_log
     def update(self, instance, validated_data):
-        print('\t+[update->update()]')
         instance.username = validated_data.get('username', instance.username)
         new_password = validated_data.get('password', None)
         if new_password:
@@ -123,7 +118,6 @@ class UserSerializer(serializers.ModelSerializer):
             instance.my_profile.birthdate = profile_data.get('birthdate', instance.my_profile.birthdate)
         instance.save()
         result = instance
-        print('\t-[\t->update()]')
         return result
 
 
